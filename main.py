@@ -36,8 +36,8 @@ def index():
 def video_feed():
     return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@app.route('/take_photo', methods=['GET', 'POST'])
-def take_photo():
+@app.route('/save_photo', methods=['GET', 'POST'])
+def save_photo():
     # take photo and save to png
     # success, frame = camera.read()
     # print("success", success)

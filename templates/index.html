@@ -22,74 +22,89 @@
         #vertical_side_bar {
             display: inline-block;
             width: 20%;
-            height: 100%;
+            height: 100% - 40px;
+            position: absolute;
+            margin: 20px 20px 20px 0px;
         }
+
+        #blitz {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            z-index: 100;
+            box-shadow: 0 0 0 1000px rgba(255,255,255,0), 0 0 8px 8px rgba(255,255,255,1);
+            display: none;
+        }
+
+
+
     </style>
-
-
 </head>
 <body>
-<!--<div class="container">-->
-<!--    <div class="row">-->
-<!--        <div class="col-lg-8  offset-lg-2">-->
-<!--            <h3 class="mt-5">Live Streaming</h3>-->
-<!--            <img src="{{ url_for('video_feed') }}" width="100%">-->
-<!--        </div>-->
-<!--    </div>-->
-<!--</div>-->
-<div id="video_container">
-    <video id="video" autoplay></video>
-</div>
-<div id="vertical_side_bar">
-    <div id="button_menu">
-        <button id="start-camera" onclick="startCamera()">Start Camera</button>
-        <button id="click-photo" onclick="takePhoto()">Click Photo</button>
+<div>
+    <div id="video_container">
+        <video id="video" autoplay></video>
     </div>
-    <div id="tumble_nails">
-        <canvas id="canvas" width="320" height="240"></canvas>
+    <div id="vertical_side_bar">
+        <div id="button_menu">
+            <button id="click-photo" onclick="takePhoto()">Click Photo</button>
+        </div>
+        <div id="photo_list">
+        </div>
     </div>
 </div>
+<div id="blitz"></div>
 </body>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"
         integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg=="
         crossorigin="anonymous"></script>
- <script>
+<script>
 
-        let camera_button = document.querySelector("#start-camera");
-        let video = document.querySelector("#video");
-        let click_button = document.querySelector("#click-photo");
-        let canvas = document.querySelector("#canvas");
-    async function startCamera() {
+    var id = 0;
+
+    let camera_button = document.querySelector("#start-camera");
+    let video = document.querySelector("#video");
+    let click_button = document.querySelector("#click-photo");
+
+    $(document).ready(async function startCamera() {
         console.log("start camera");
         let stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         video.srcObject = stream;
-    };
+    });
+
+    function showBlitz() {
+        $('#blitz').fadeIn(100).fadeOut(500);
+    }
 
     function takePhoto() {
+        $("#photo_list").append('<canvas id="canvas'+ id +'" class="canvas" width="320" height="240"></canvas>');
+        let canvas = document.querySelector("#canvas" + id);
+        id++;
+
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
         let image_data_url = canvas.toDataURL('image/jpeg');
 
         // data url of the image
         console.log(image_data_url);
 
-        // take a photo
-        /*$.ajax({
-            url: '/take_photo',
-            type: 'post',
-            dataType: 'json',
-            contentType: 'application/json',
-            success: function (data) {
-                console.log(data);
-            }
-        });*/
+        // update css for taking photo - blitz the screen
+        showBlitz();
+
+        // save a photo
         var data = canvas.toDataURL('image/jpeg');
         var request = new XMLHttpRequest();
-        request.open("POST", '/take_photo', true);
+        request.open("POST", '/save_photo', true);
         request.send(data);
 
     };
 
 
-    </script>
+
+
+
+</script>
 </html>
