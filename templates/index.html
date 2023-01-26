@@ -9,22 +9,34 @@
 
         #video_container {
             display: inline-block;
-            width: 70%;
+            width: 79%;
             height: 100%;
+            position: fixed;
+            top: 0px;
+            left: 0px;
         }
 
         #video {
-            width: 100%-40px;
-            height: 100%-40px;
-            margin: 20px;
+            width: auto;
+            height: auto;
+            padding: 20px;
         }
 
         #vertical_side_bar {
-            display: inline-block;
+            display: block;
             width: 20%;
-            height: 100% - 40px;
-            position: absolute;
+            height: calc(100% - 40px);
             margin: 20px 20px 20px 0px;
+            float: right;
+        }
+
+        #photo_list {
+            width: 100%;
+            padding: 0px;
+        }
+
+        .canvas {
+            margin-bottom: 20px;
         }
 
         #blitz {
@@ -39,6 +51,73 @@
             display: none;
         }
 
+        #start_menu {
+            position: fixed;
+            top: 60px;
+            left: 60px;
+            width: 200px;
+            height: 200px;
+            z-index: 100;
+            display: block;
+        }
+
+
+        #countdown {
+          position: absolute;
+          margin: auto;
+          height: 40px;
+          width: 40px;
+          text-align: center;
+        }
+
+        #countdown-number {
+          color: white;
+          display: inline-block;
+          position: relative;
+          top: 0;
+          left: 80px;
+          line-height: 200px;
+          font-size: 100px;
+        }
+
+        svg {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 200px;
+          height: 200px;
+          transform: rotateY(-180deg) rotateZ(-90deg);
+        }
+
+        svg circle {
+          stroke-width: 2px;
+          stroke: white;
+          fill: none;
+        }
+
+        svg .triangle {
+            fill:white;
+        }
+
+        .count svg circle {
+          stroke-dasharray: 500px;
+          stroke-dashoffset: 0px;
+          stroke-linecap: round;
+          animation: countdown 3s linear infinite forwards;
+        }
+
+        .count svg .triangle {
+            fill:none;
+        }
+
+        @keyframes countdown {
+          to {
+            stroke-dashoffset: 0px;
+          }
+          from {
+            stroke-dashoffset: 500px;
+          }
+        }
 
 
     </style>
@@ -48,10 +127,16 @@
     <div id="video_container">
         <video id="video" autoplay></video>
     </div>
-    <div id="vertical_side_bar">
-        <div id="button_menu">
-            <button id="click-photo" onclick="takePhoto()">Click Photo</button>
+    <div id="start_menu">
+        <div id="countdown" onclick="start_photobox()">
+            <svg>
+                <circle r="80" cx="50%" cy="50%"></circle>
+                <polygon class="triangle display" points="100,50 50,125 150,125"/>
+            </svg>
+            <div id="countdown-number"></div>
         </div>
+    </div>
+    <div id="vertical_side_bar">
         <div id="photo_list">
         </div>
     </div>
@@ -64,26 +149,94 @@
         crossorigin="anonymous"></script>
 <script>
 
+    function resize(){
+        // resize the video to fit the container and be aligned left
+        console.log("resize");
+
+        //get ratio of video
+        let video = $("#video");
+        let video_width = video.width();
+        let video_height = video.height();
+        let ratio = video_width / video_height;
+
+        //get ratio of container
+        let window_width = $(window).width();
+        let window_height = $(window).height();
+        let container = $("#video_container");
+        let container_width = Math.min(container.width(), window_width)  - 40;
+        let container_height = Math.min(container.height(), window_height) - 40;
+        let container_ratio = container_width / container_height;
+
+        //get size scalar between width and height
+        let scalar = container_ratio > ratio ? container_height / video_height : container_width / video_width;
+
+        //resize video to fit either the width or height of the container
+        video.width(video_width * scalar);
+    }
+
     var id = 0;
 
     let camera_button = document.querySelector("#start-camera");
     let video = document.querySelector("#video");
     let click_button = document.querySelector("#click-photo");
 
+
     $(document).ready(async function startCamera() {
         console.log("start camera");
         let stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         video.srcObject = stream;
+
+
+
+        $(window).on('resize', function() {
+            resize();
+        });
+        resize();
     });
+
+
 
     function showBlitz() {
         $('#blitz').fadeIn(100).fadeOut(500);
     }
 
-    function takePhoto() {
-        $("#photo_list").append('<canvas id="canvas'+ id +'" class="canvas" width="320" height="240"></canvas>');
+
+    function start_countdown(time, next_function) {
+        $("#countdown").addClass("count");
+        var countdownNumberEl = document.getElementById('countdown-number');
+        var countdown = time;
+
+        countdownNumberEl.textContent = countdown;
+
+        var interval = setInterval(function() {
+          countdown = countdown - 1;
+          countdownNumberEl.textContent = countdown;
+          if (countdown <= 0) {
+            countdownNumberEl.textContent = '';
+            clearInterval(interval);
+            $("#countdown").removeClass("count");
+            next_function();
+          }
+        }, 1000);
+    }
+
+    function takePhoto(next_function) {
+
+
+        let _video = $("#video");
+        let video_width = _video.width();
+        let video_height = _video.height();
+        let ratio = video_width / video_height;
+
+        let photo_list = $("#photo_list");
+        let photo_list_width = photo_list.width();
+
+        $("#photo_list").prepend('<canvas id="canvas'+ id +'" class="canvas" style="width:' + photo_list_width + ';height:' + photo_list_width/ratio + ';"></canvas>');
         let canvas = document.querySelector("#canvas" + id);
         id++;
+
+        // update css for taking photo - blitz the screen
+        showBlitz();
 
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
         let image_data_url = canvas.toDataURL('image/jpeg');
@@ -91,8 +244,6 @@
         // data url of the image
         console.log(image_data_url);
 
-        // update css for taking photo - blitz the screen
-        showBlitz();
 
         // save a photo
         var data = canvas.toDataURL('image/jpeg');
@@ -100,8 +251,35 @@
         request.open("POST", '/save_photo', true);
         request.send(data);
 
+        next_function();
     };
 
+    function start_photobox() {
+        start_countdown(3,
+            function() {
+                takePhoto(
+                    function(){
+                        start_countdown(3,
+                            function() {
+                                takePhoto(
+                                    function(){
+                                        start_countdown(3,
+                                            function() {
+                                                takePhoto();
+                                            }
+                                        );
+                                    }
+                                );
+                            }
+                        );
+                    }
+                );
+            }
+        );
+    }
+
+
+    resize();
 
 
 

@@ -1,12 +1,14 @@
 # Initialize flask app
 import base64
+from datetime import datetime
 
 import cv2
 from flask import Flask, render_template, Response, make_response, request
 
 app = Flask(__name__)
 
-#Initialize camera
+
+# Initialize camera
 # camera = cv2.VideoCapture(0)
 
 #
@@ -31,10 +33,12 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
+
 # Define app rout for the video feed
 @app.route('/video_feed')
 def video_feed():
     return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 @app.route('/save_photo', methods=['GET', 'POST'])
 def save_photo():
@@ -43,6 +47,9 @@ def save_photo():
     # print("success", success)
     # print("frame", frame)
 
+    now = datetime.now()
+    name = now.strftime("%Y_%m_%d_%H_%M_%S")
+
     print(request)
     print(request.data)
 
@@ -50,16 +57,16 @@ def save_photo():
 
     image_data = image_data.split(b',')[1]
     image_data = base64.b64decode(image_data)
-    with open('templates/photos/image.png', 'wb') as f:
+    with open('templates/photos/' + name + '.png', 'wb') as f:
         f.write(image_data)
     return 'Successfully saved image'
 
     success = True
     if success:
-        # cv2.imwrite('photo.png', frame)
         return make_response('success')
     else:
         return make_response('fail')
+
 
 if __name__ == "__main__":
     app.run(debug=True)
