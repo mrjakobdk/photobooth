@@ -5,6 +5,7 @@
             font-family: Arial, Helvetica, sans-serif;
             margin: 0px;
             padding: 0px;
+            overflow: hidden;
         }
 
         #video_container {
@@ -20,6 +21,15 @@
             width: auto;
             height: auto;
             padding: 20px;
+            object-fit: cover;
+            overflow-clip-margin: content-box;
+            overflow: clip;
+        }
+
+        hidden_video{
+            display: none;
+            width: auto;
+            height: auto;
         }
 
         #vertical_side_bar {
@@ -37,6 +47,18 @@
 
         .canvas {
             margin-bottom: 20px;
+        }
+
+        .photo_wrapper {
+            position: relative;
+        }
+
+        .delete {
+            position: absolute;
+            right: 8px;
+            color: white;
+            font-size: 20px;
+            text-decoration: none;
         }
 
         #blitz {
@@ -75,7 +97,7 @@
           display: inline-block;
           position: relative;
           top: 0;
-          left: 80px;
+          left: 75px;
           line-height: 200px;
           font-size: 100px;
         }
@@ -120,12 +142,16 @@
         }
 
 
+
+
+
     </style>
 </head>
 <body>
 <div>
     <div id="video_container">
         <video id="video" autoplay></video>
+        <video id="hidden_video" autoplay></video>
     </div>
     <div id="start_menu">
         <div id="countdown" onclick="start_photobox()">
@@ -155,8 +181,8 @@
 
         //get ratio of video
         let video = $("#video");
-        let video_width = video.width();
-        let video_height = video.height();
+        let video_width = 500.; //video.width();
+        let video_height = 335.; //video.height();
         let ratio = video_width / video_height;
 
         //get ratio of container
@@ -172,28 +198,33 @@
 
         //resize video to fit either the width or height of the container
         video.width(video_width * scalar);
+        video.height(video_height * scalar);
     }
 
     var id = 0;
 
     let camera_button = document.querySelector("#start-camera");
     let video = document.querySelector("#video");
+    let hidden_video = document.querySelector("#hidden_video");
     let click_button = document.querySelector("#click-photo");
 
-
+    let stream = 0;
     $(document).ready(async function startCamera() {
         console.log("start camera");
-        let stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         video.srcObject = stream;
-
+<!--        hidden_video.srcObject = stream;-->
 
 
         $(window).on('resize', function() {
             resize();
         });
         resize();
-    });
 
+
+        let hidden_canvas = $('<canvas id="hidden_canvas" style="display:none;width:1920px;height:1080px;"></canvas>');
+        $("body").append(hidden_canvas);
+    });
 
 
     function showBlitz() {
@@ -222,7 +253,6 @@
 
     function takePhoto(next_function) {
 
-
         let _video = $("#video");
         let video_width = _video.width();
         let video_height = _video.height();
@@ -231,25 +261,61 @@
         let photo_list = $("#photo_list");
         let photo_list_width = photo_list.width();
 
-        $("#photo_list").prepend('<canvas id="canvas'+ id +'" class="canvas" style="width:' + photo_list_width + ';height:' + photo_list_width/ratio + ';"></canvas>');
+
+        let wrapper = $("<div class='photo_wrapper' id='photo_wrapper" + id + "'></div>");
+        let del = $("<a href='#' class='delete'>&#x2716;</a>");
+
+        wrapper.append(del);
+        let photo = $('<canvas id="canvas'+ id +'" class="canvas" style="width:' + photo_list_width + ';height:' + photo_list_width/ratio + ';"></canvas>');
+        wrapper.prepend(photo);
+        $("#photo_list").prepend(wrapper);
         let canvas = document.querySelector("#canvas" + id);
+        let this_time = Date.now();
+
         id++;
+
+        del.click(function() {
+            $.ajax({
+				url: '/delete_photo',
+				type: 'post',
+				dataType: 'json',
+				contentType: 'application/json',
+				data: JSON.stringify({time: this_time}),
+				success: function (data) {
+				    wrapper.remove();
+                }
+            });
+        });
 
         // update css for taking photo - blitz the screen
         showBlitz();
 
-        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-        let image_data_url = canvas.toDataURL('image/jpeg');
-
-        // data url of the image
-        console.log(image_data_url);
-
+        canvas.getContext('2d').drawImage(video, -28, 0, canvas.width+56, canvas.height);
+        let hidden_canvas = document.querySelector("#hidden_canvas");
+        hidden_canvas.setAttribute('width', '1920');
+        hidden_canvas.setAttribute('height', '1080');
+        video.setAttribute('width', 'auto');
+        video.setAttribute('height', 'auto');
+        hidden_canvas.getContext('2d').drawImage(video, 0, 0, 1920, 1080); //drawImage(video, 0, 0, 1920, 1080);
+        video.setAttribute('width', video_width);
+        video.setAttribute('height', video_height);
 
         // save a photo
-        var data = canvas.toDataURL('image/jpeg');
+        var data = hidden_canvas.toDataURL('image/jpeg', 1.0) + "," + this_time;
         var request = new XMLHttpRequest();
         request.open("POST", '/save_photo', true);
         request.send(data);
+
+<!--        $.ajax({-->
+<!--            url: '/save_photo',-->
+<!--            type: 'post',-->
+<!--            dataType: 'json',-->
+<!--            contentType: 'application/json',-->
+<!--            data: JSON.stringify({id: this_id, data: data}),-->
+<!--            success: function (data) {-->
+<!--                wrapper.remove();-->
+<!--            }-->
+<!--        });-->
 
         next_function();
     };
@@ -265,7 +331,7 @@
                                     function(){
                                         start_countdown(3,
                                             function() {
-                                                takePhoto();
+                                                takePhoto( function() {});
                                             }
                                         );
                                     }
@@ -281,6 +347,11 @@
 
     resize();
 
+    document.addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+           start_photobox();
+        }
+    })
 
 
 

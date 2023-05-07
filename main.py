@@ -3,7 +3,8 @@ import base64
 from datetime import datetime
 
 import cv2
-from flask import Flask, render_template, Response, make_response, request
+from flask import Flask, render_template, Response, make_response, request, jsonify
+import os
 
 app = Flask(__name__)
 
@@ -42,22 +43,19 @@ def video_feed():
 
 @app.route('/save_photo', methods=['GET', 'POST'])
 def save_photo():
-    # take photo and save to png
-    # success, frame = camera.read()
-    # print("success", success)
-    # print("frame", frame)
 
     now = datetime.now()
-    name = now.strftime("%Y_%m_%d_%H_%M_%S")
-
-    print(request)
-    print(request.data)
 
     image_data = request.data
+    print(image_data)
+    splitted = image_data.split(b',')
 
-    image_data = image_data.split(b',')[1]
+    time = splitted[2]
+    print(str(time))
+    image_data = splitted[1]
+    print("lenght:", len(str(image_data)))
     image_data = base64.b64decode(image_data)
-    with open('templates/photos/' + name + '.png', 'wb') as f:
+    with open('templates/photos/' + str(time)[2:-1] + '.jpeg', 'wb') as f:
         f.write(image_data)
     return 'Successfully saved image'
 
@@ -66,6 +64,14 @@ def save_photo():
         return make_response('success')
     else:
         return make_response('fail')
+
+@app.route('/delete_photo', methods=['GET', 'POST'])
+def delete_photo():
+    time = request.json['time']
+    os.remove('templates/photos/' + str(time) + '.jpeg')
+    return jsonify({'time': time})
+
+
 
 
 if __name__ == "__main__":
